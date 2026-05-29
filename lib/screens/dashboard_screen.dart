@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'assets_screen.dart';
 import 'transactions_screen.dart';
 import 'goals_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,9 +34,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final screens = [
       _homeTab(),
-      const AssetsScreen(),
-      const TransactionsScreen(),
+      AssetsScreen(),
+      TransactionsScreen(),
       GoalsScreen(),
+      SettingsScreen(),
     ];
 
     return Scaffold(
@@ -48,11 +50,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Assets'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_vert), label: 'Transactions'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
@@ -67,12 +71,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('Finmap'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async => await _supabase.auth.signOut(),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
