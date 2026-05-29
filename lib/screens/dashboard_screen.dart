@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'assets_screen.dart';
 import 'transactions_screen.dart';
+import 'goals_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -30,7 +31,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [_homeTab(), const AssetsScreen(), const TransactionsScreen()];
+    final screens = [
+      _homeTab(),
+      const AssetsScreen(),
+      const TransactionsScreen(),
+      GoalsScreen(),
+    ];
 
     return Scaffold(
       body: screens[_currentIndex],
@@ -41,10 +47,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (i == 0) _loadTotals();
         },
         selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Assets'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_vert), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
         ],
       ),
     );
