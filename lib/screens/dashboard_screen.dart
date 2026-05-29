@@ -1,13 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'assets_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
 
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _currentIndex = 0;
+  final _supabase = Supabase.instance.client;
+  double _totalAssets = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTotals();
+  }
+
+  Future<void> _loadTotals() async {
+    final data = await _supabase.from('assets').select('amount');
+    final total = (data as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
+    setState(() => _totalAssets = total);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = _supabase.auth.currentUser;
+    final screens = [_homeTab(user), const AssetsScreen()];
+
+    return Scaffold(
+      body: screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (i) {
+          setState(() => _currentIndex = i);
+          if (i == 0) _loadTotals();
+        },
+        selectedItemColor: Colors.green,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Assets'),
+        ],
+      ),
+    );
+  }
+
+  Widget _homeTab(user) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Finmap'),
@@ -16,9 +57,7 @@ class DashboardScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-            },
+            onPressed: () async => await _supabase.auth.signOut(),
           ),
         ],
       ),
@@ -27,10 +66,8 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Welcome, ${user?.email ?? 'User'}!',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text('Welcome, ${user?.email ?? 'User'}!',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             Container(
               width: double.infinity,
@@ -39,29 +76,21 @@ class DashboardScreen extends StatelessWidget {
                 color: Colors.green,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Text('Net Worth',
-                      style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  SizedBox(height: 8),
-                  Text('₹0',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold)),
+                  const Text('Net Worth', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  Text('₹${_totalAssets.toStringAsFixed(0)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _summaryCard('Total Assets', '₹0', Colors.blue),
-                ),
+                Expanded(child: _summaryCard('Total Assets', '₹${_totalAssets.toStringAsFixed(0)}', Colors.blue)),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: _summaryCard('Total Liabilities', '₹0', Colors.red),
-                ),
+                Expanded(child: _summaryCard('Total Liabilities', '₹0', Colors.red)),
               ],
             ),
           ],
@@ -83,9 +112,7 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Text(title, style: TextStyle(color: color, fontSize: 12)),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  color: color, fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
         ],
       ),
     );
