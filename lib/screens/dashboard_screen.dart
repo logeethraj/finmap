@@ -4,6 +4,7 @@ import 'assets_screen.dart';
 import 'transactions_screen.dart';
 import 'goals_screen.dart';
 import 'settings_screen.dart';
+import 'liabilities_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,8 +27,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadTotals() async {
     final assets = await _supabase.from('assets').select('amount');
-    final total = (assets as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
-    setState(() => _totalAssets = total);
+    final liabilities = await _supabase.from('liabilities').select('amount');
+    final totalAssets = (assets as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
+    final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
+    setState(() {
+      _totalAssets = totalAssets;
+      _totalLiabilities = totalLiabilities;
+    });
   }
 
   @override
@@ -35,6 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final screens = [
       _homeTab(),
       AssetsScreen(),
+      LiabilitiesScreen(),
       TransactionsScreen(),
       GoalsScreen(),
       SettingsScreen(),
@@ -54,6 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Assets'),
+          BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Liabilities'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_vert), label: 'Transactions'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
@@ -84,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green,
+                color: netWorth >= 0 ? Colors.green : Colors.red,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
