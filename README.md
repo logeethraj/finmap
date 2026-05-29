@@ -1,4 +1,5 @@
 # finmap
+<<<<<<< HEAD
 
 A new Flutter project.
 
@@ -15,3 +16,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+Personal finance tracker app built with Flutter &amp; Supabase
+>>>>>>> c315879a7ae167f06b5397a7c83515d3a57efc7b
