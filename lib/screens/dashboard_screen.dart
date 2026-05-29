@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'assets_screen.dart';
+import 'transactions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,6 +14,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
   final _supabase = Supabase.instance.client;
   double _totalAssets = 0;
+  double _totalLiabilities = 0;
 
   @override
   void initState() {
@@ -21,15 +23,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadTotals() async {
-    final data = await _supabase.from('assets').select('amount');
-    final total = (data as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
+    final assets = await _supabase.from('assets').select('amount');
+    final total = (assets as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
     setState(() => _totalAssets = total);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = _supabase.auth.currentUser;
-    final screens = [_homeTab(user), const AssetsScreen()];
+    final screens = [_homeTab(), const AssetsScreen(), const TransactionsScreen()];
 
     return Scaffold(
       body: screens[_currentIndex],
@@ -43,12 +44,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Assets'),
+          BottomNavigationBarItem(icon: Icon(Icons.swap_vert), label: 'Transactions'),
         ],
       ),
     );
   }
 
-  Widget _homeTab(user) {
+  Widget _homeTab() {
+    final user = _supabase.auth.currentUser;
+    final netWorth = _totalAssets - _totalLiabilities;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Finmap'),
@@ -80,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   const Text('Net Worth', style: TextStyle(color: Colors.white70, fontSize: 16)),
                   const SizedBox(height: 8),
-                  Text('₹${_totalAssets.toStringAsFixed(0)}',
+                  Text('₹${netWorth.toStringAsFixed(0)}',
                       style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -90,7 +95,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(child: _summaryCard('Total Assets', '₹${_totalAssets.toStringAsFixed(0)}', Colors.blue)),
                 const SizedBox(width: 12),
-                Expanded(child: _summaryCard('Total Liabilities', '₹0', Colors.red)),
+                Expanded(child: _summaryCard('Total Liabilities', '₹${_totalLiabilities.toStringAsFixed(0)}', Colors.red)),
               ],
             ),
           ],
