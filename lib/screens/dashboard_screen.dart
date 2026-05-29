@@ -5,6 +5,7 @@ import 'transactions_screen.dart';
 import 'goals_screen.dart';
 import 'settings_screen.dart';
 import 'liabilities_screen.dart';
+import 'health_check_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -44,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       LiabilitiesScreen(),
       TransactionsScreen(),
       GoalsScreen(),
+      HealthCheckScreen(),
       SettingsScreen(),
     ];
 
@@ -64,6 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Liabilities'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_vert), label: 'Transactions'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Health'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
