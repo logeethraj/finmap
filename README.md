@@ -38,8 +38,14 @@ A personal finance tracker app built with Flutter & Supabase.
 
 ## Screenshots
 
-Coming soon
+| Dashboard | Assets |
+|---|---|
+| ![Dashboard](screenshots/dashboard.jpeg) | ![Assets](screenshots/assets.jpeg) |
+
+| Transactions | Goals |
+|---|---|
+| ![Transactions](screenshots/transactions.jpeg) | ![Goals](screenshots/goals.jpeg) |
 
 ---
 
-Built as part of an internship project — Finmap helps users track their net worth, manage assets, and achieve financial goals.
+Built as part of an internship project — Finmap helps users track their net worth, manage assets, and achieve financial goals
