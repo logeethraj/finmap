@@ -95,3 +95,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  app_links: 7.0.0
+  file_picker: ^8.1.7

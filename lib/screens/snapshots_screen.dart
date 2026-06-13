@@ -31,6 +31,23 @@ class _SnapshotsScreenState extends State<SnapshotsScreen> {
   }
 
   Future<void> _takeSnapshot() async {
+    final existing = await _supabase
+        .from('snapshots')
+        .select('id')
+        .gte('created_at', DateTime.now().subtract(const Duration(days: 30)).toIso8601String());
+
+    if ((existing as List).length >= 2) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Free users can take 2 snapshots/month. Upgrade to Pro for unlimited!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     final assets = await _supabase.from('assets').select('amount');
     final liabilities = await _supabase.from('liabilities').select('amount');
     final totalAssets = (assets as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));

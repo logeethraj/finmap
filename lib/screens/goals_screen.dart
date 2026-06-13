@@ -34,64 +34,74 @@ class _GoalsScreenState extends State<GoalsScreen> {
     await _supabase.from('goals').delete().eq('id', id);
     _loadGoals();
   }
+void _showAddGoalDialog() async {
+  // Check free user limit
+  if (_goals.length >= 3) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Free users can create 3 goals. Upgrade to Pro for unlimited!'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
 
-  void _showAddGoalDialog() {
-    final nameController = TextEditingController();
-    final targetController = TextEditingController();
-    final currentController = TextEditingController();
-    final yearController = TextEditingController();
+  final nameController = TextEditingController();
+  final targetController = TextEditingController();
+  final currentController = TextEditingController();
+  final yearController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Goal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Goal Name (e.g. Retirement)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: targetController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Target Amount (₹)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: currentController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Current Amount (₹)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: yearController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Target Year (e.g. 2030)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await _supabase.from('goals').insert({
-                'user_id': _supabase.auth.currentUser!.id,
-                'name': nameController.text,
-                'target_amount': double.parse(targetController.text),
-                'current_amount': double.tryParse(currentController.text) ?? 0,
-                'target_year': int.parse(yearController.text),
-              });
-              if (mounted) Navigator.pop(context);
-              _loadGoals();
-            },
-            child: const Text('Add'),
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Add Goal'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: 'Goal Name (e.g. Retirement)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: targetController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Target Amount (₹)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: currentController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Current Amount (₹)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: yearController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Target Year (e.g. 2030)'),
           ),
         ],
       ),
-    );
-  }
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () async {
+            await _supabase.from('goals').insert({
+              'user_id': _supabase.auth.currentUser!.id,
+              'name': nameController.text,
+              'target_amount': double.parse(targetController.text),
+              'current_amount': double.tryParse(currentController.text) ?? 0,
+              'target_year': int.parse(yearController.text),
+            });
+            if (mounted) Navigator.pop(context);
+            _loadGoals();
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

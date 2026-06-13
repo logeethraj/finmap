@@ -89,14 +89,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Welcome, ${user?.email ?? 'User'}!',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.workspace_premium, color: Colors.purple, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('🎉 14-day Pro trial active! Enjoy all features free.',
+                        style: TextStyle(color: Colors.purple, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),

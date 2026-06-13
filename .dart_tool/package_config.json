@@ -3,9 +3,9 @@
   "packages": [
     {
       "name": "app_links",
-      "rootUri": "file:///C:/Users/DELL/AppData/Local/Pub/Cache/hosted/pub.dev/app_links-7.1.0",
+      "rootUri": "file:///C:/Users/DELL/AppData/Local/Pub/Cache/hosted/pub.dev/app_links-7.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.12"
+      "languageVersion": "3.10"
     },
     {
       "name": "app_links_linux",
