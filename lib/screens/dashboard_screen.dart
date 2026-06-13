@@ -8,6 +8,7 @@ import 'liabilities_screen.dart';
 import 'health_check_screen.dart';
 import 'snapshots_screen.dart';
 import 'pricing_screen.dart';
+import 'profiles_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -49,6 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       GoalsScreen(),
       SnapshotsScreen(),
       HealthCheckScreen(),
+      ProfilesScreen(),
       PricingScreen(),
       SettingsScreen(),
     ];
@@ -72,6 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
           BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: 'Snapshots'),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Health'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Family'),
           BottomNavigationBarItem(icon: Icon(Icons.workspace_premium), label: 'Pro'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
@@ -126,19 +129,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Column(
                 children: [
-                  const Text('Net Worth', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  const Text('Net Worth',
+                      style: TextStyle(color: Colors.white70, fontSize: 16)),
                   const SizedBox(height: 8),
                   Text('₹${netWorth.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _summaryCard('Total Assets', '₹${_totalAssets.toStringAsFixed(0)}', Colors.blue)),
+                Expanded(
+                    child: _summaryCard('Total Assets',
+                        '₹${_totalAssets.toStringAsFixed(0)}', Colors.blue)),
                 const SizedBox(width: 12),
-                Expanded(child: _summaryCard('Total Liabilities', '₹${_totalLiabilities.toStringAsFixed(0)}', Colors.red)),
+                Expanded(
+                    child: _summaryCard('Total Liabilities',
+                        '₹${_totalLiabilities.toStringAsFixed(0)}', Colors.red)),
               ],
             ),
           ],
@@ -160,7 +171,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Text(title, style: TextStyle(color: color, fontSize: 12)),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(value,
+              style: TextStyle(
+                  color: color, fontSize: 20, fontWeight: FontWeight.bold)),
         ],
       ),
     );

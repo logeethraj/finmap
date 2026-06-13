@@ -14,6 +14,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _supabase = Supabase.instance.client;
   String _selectedCurrency = 'INR';
   bool _darkMode = false;
+  bool _biometric = false;
 
   final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'];
 
@@ -28,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _selectedCurrency = prefs.getString('currency') ?? 'INR';
       _darkMode = prefs.getBool('darkMode') ?? false;
+      _biometric = prefs.getBool('biometric') ?? false;
     });
   }
 
@@ -41,6 +43,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('darkMode', value);
     setState(() => _darkMode = value);
+  }
+
+  Future<void> _saveBiometric(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('biometric', value);
+    setState(() => _biometric = value);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(value ? 'Biometric lock enabled' : 'Biometric lock disabled'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Future<void> _exportData() async {
@@ -126,6 +140,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _darkMode,
               activeColor: Colors.green,
               onChanged: _saveTheme,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.fingerprint, color: Colors.green),
+            title: const Text('Biometric Lock'),
+            subtitle: const Text('Use fingerprint to unlock app'),
+            trailing: Switch(
+              value: _biometric,
+              activeColor: Colors.green,
+              onChanged: _saveBiometric,
             ),
           ),
           const Divider(),
