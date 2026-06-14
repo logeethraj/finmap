@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
+import '../services/currency_service.dart';
 
 class AssetsScreen extends StatefulWidget {
   const AssetsScreen({super.key});
@@ -14,6 +15,9 @@ class _AssetsScreenState extends State<AssetsScreen> {
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _assets = [];
   bool _isLoading = true;
+  double _totalInINR = 0;
+
+  final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'];
 
   @override
   void initState() {
@@ -26,8 +30,17 @@ class _AssetsScreenState extends State<AssetsScreen> {
         .from('assets')
         .select()
         .order('created_at', ascending: false);
+    
+    double total = 0;
+    for (final a in data) {
+      final amount = (a['amount'] as num).toDouble();
+      final currency = a['currency'] ?? 'INR';
+      total += await CurrencyService.convertToINR(amount, currency);
+    }
+
     setState(() {
       _assets = List<Map<String, dynamic>>.from(data);
+      _totalInINR = total;
       _isLoading = false;
     });
   }
@@ -63,6 +76,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
             'name': row[0].toString(),
             'category': row[1].toString(),
             'amount': double.tryParse(row[2].toString()) ?? 0,
+            'currency': 'INR',
           });
           imported++;
         }
@@ -87,6 +101,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
     final nameController = TextEditingController();
     final amountController = TextEditingController();
     String selectedCategory = 'Equity';
+    String selectedCurrency = 'INR';
     final categories = ['Equity', 'Mutual Fund', 'Gold', 'Real Estate', 'PPF', 'Crypto', 'Cash', 'Other'];
 
     showDialog(
@@ -94,27 +109,43 @@ class _AssetsScreenState extends State<AssetsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Asset'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Asset Name'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount (₹)'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedCategory,
-                items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => setDialogState(() => selectedCategory = v!),
-                decoration: const InputDecoration(labelText: 'Category'),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Asset Name'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Amount'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: selectedCurrency,
+                      items: _currencies
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setDialogState(() => selectedCurrency = v!),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (v) => setDialogState(() => selectedCategory = v!),
+                  decoration: const InputDecoration(labelText: 'Category'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
@@ -125,6 +156,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
                   'name': nameController.text,
                   'amount': double.parse(amountController.text),
                   'category': selectedCategory,
+                  'currency': selectedCurrency,
                 });
                 if (mounted) Navigator.pop(context);
                 _loadAssets();
@@ -139,8 +171,6 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final total = _assets.fold(0.0, (sum, a) => sum + (a['amount'] as num));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assets'),
@@ -168,7 +198,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
                   padding: const EdgeInsets.all(16),
                   color: Colors.green.shade50,
                   child: Text(
-                    'Total Assets: ₹${total.toStringAsFixed(0)}',
+                    'Total Assets: ₹${_totalInINR.toStringAsFixed(0)}',
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -182,22 +212,23 @@ class _AssetsScreenState extends State<AssetsScreen> {
                           itemCount: _assets.length,
                           itemBuilder: (context, index) {
                             final asset = _assets[index];
+                            final currency = asset['currency'] ?? 'INR';
                             return ListTile(
                               leading: const CircleAvatar(
                                   backgroundColor: Colors.green,
                                   child: Icon(Icons.account_balance_wallet,
                                       color: Colors.white)),
                               title: Text(asset['name']),
-                              subtitle: Text(asset['category']),
+                              subtitle: Text('${asset['category']} • $currency'),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('₹${asset['amount']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
+                                  Text(
+                                    '${_symbolFor(currency)}${asset['amount']}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red),
+                                    icon: const Icon(Icons.delete, color: Colors.red),
                                     onPressed: () => _deleteAsset(asset['id']),
                                   ),
                                 ],
@@ -209,5 +240,15 @@ class _AssetsScreenState extends State<AssetsScreen> {
               ],
             ),
     );
+  }
+
+  String _symbolFor(String currency) {
+    switch (currency) {
+      case 'USD': return '\$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      case 'INR': return '₹';
+      default: return '$currency ';
+    }
   }
 }
