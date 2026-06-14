@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -42,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveTheme(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('darkMode', value);
+    themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
     setState(() => _darkMode = value);
   }
 

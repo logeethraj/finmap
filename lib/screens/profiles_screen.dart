@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/currency_service.dart';
 
 class ProfilesScreen extends StatefulWidget {
   const ProfilesScreen({super.key});
@@ -11,32 +12,48 @@ class ProfilesScreen extends StatefulWidget {
 class _ProfilesScreenState extends State<ProfilesScreen> {
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _profiles = [];
+  double _myNetWorth = 0;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProfiles();
+    _loadData();
   }
 
-  Future<void> _loadProfiles() async {
-    final data = await _supabase
+  Future<void> _loadData() async {
+    final profiles = await _supabase
         .from('profiles')
         .select()
         .order('created_at', ascending: true);
+
+    final assets = await _supabase.from('assets').select('amount, currency');
+    final liabilities = await _supabase.from('liabilities').select('amount');
+
+    double totalAssets = 0;
+    for (final a in assets) {
+      final amount = (a['amount'] as num).toDouble();
+      final currency = a['currency'] ?? 'INR';
+      totalAssets += await CurrencyService.convertToINR(amount, currency);
+    }
+    final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
+
     setState(() {
-      _profiles = List<Map<String, dynamic>>.from(data);
+      _profiles = List<Map<String, dynamic>>.from(profiles);
+      _myNetWorth = totalAssets - totalLiabilities;
       _isLoading = false;
     });
   }
 
   Future<void> _deleteProfile(String id) async {
     await _supabase.from('profiles').delete().eq('id', id);
-    _loadProfiles();
+    _loadData();
   }
 
   void _showAddProfileDialog() {
     final nameController = TextEditingController();
+    final assetsController = TextEditingController();
+    final liabilitiesController = TextEditingController();
     String selectedType = 'Spouse';
     final types = ['Spouse', 'Business', 'Child', 'Parent', 'Other'];
 
@@ -45,21 +62,35 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Profile Name'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedType,
-                items: types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                onChanged: (v) => setDialogState(() => selectedType = v!),
-                decoration: const InputDecoration(labelText: 'Type'),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Profile Name'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedType,
+                  items: types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  onChanged: (v) => setDialogState(() => selectedType = v!),
+                  decoration: const InputDecoration(labelText: 'Type'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: assetsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Their Total Assets (₹)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: liabilitiesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Their Total Liabilities (₹)'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
@@ -69,9 +100,11 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                   'owner_id': _supabase.auth.currentUser!.id,
                   'name': nameController.text,
                   'type': selectedType,
+                  'total_assets': double.tryParse(assetsController.text) ?? 0,
+                  'total_liabilities': double.tryParse(liabilitiesController.text) ?? 0,
                 });
                 if (mounted) Navigator.pop(context);
-                _loadProfiles();
+                _loadData();
               },
               child: const Text('Add'),
             ),
@@ -128,6 +161,14 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    double profilesNetWorth = 0;
+    for (final p in _profiles) {
+      final pAssets = (p['total_assets'] as num?) ?? 0;
+      final pLiabilities = (p['total_liabilities'] as num?) ?? 0;
+      profilesNetWorth += (pAssets - pLiabilities);
+    }
+    final consolidatedTotal = _myNetWorth + profilesNetWorth;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Family Profiles'),
@@ -152,6 +193,24 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
               children: [
                 Container(
                   width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  color: Colors.teal,
+                  child: Column(
+                    children: [
+                      const Text('Consolidated Family Wealth',
+                          style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      Text('₹${consolidatedTotal.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('You: ₹${_myNetWorth.toStringAsFixed(0)} + ${_profiles.length} profile(s): ₹${profilesNetWorth.toStringAsFixed(0)}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   color: Colors.teal.shade50,
                   child: const Row(
@@ -160,7 +219,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Pro feature: Add spouse or business profiles to track consolidated family wealth.',
+                          'Add family/business profiles with their assets and liabilities for combined net worth.',
                           style: TextStyle(color: Colors.teal, fontSize: 13),
                         ),
                       ),
@@ -191,6 +250,9 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                           itemCount: _profiles.length,
                           itemBuilder: (context, index) {
                             final profile = _profiles[index];
+                            final pAssets = (profile['total_assets'] as num?) ?? 0;
+                            final pLiabilities = (profile['total_liabilities'] as num?) ?? 0;
+                            final pNetWorth = pAssets - pLiabilities;
                             return Card(
                               child: ListTile(
                                 leading: CircleAvatar(
@@ -201,10 +263,24 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                                   ),
                                 ),
                                 title: Text(profile['name']),
-                                subtitle: Text(profile['type']),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteProfile(profile['id']),
+                                subtitle: Text(
+                                    '${profile['type']} • Assets ₹${pAssets.toStringAsFixed(0)} - Liabilities ₹${pLiabilities.toStringAsFixed(0)}'),
+                                trailing: SizedBox(
+                                  height: 60,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('₹${pNetWorth.toStringAsFixed(0)}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () => _deleteProfile(profile['id']),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );

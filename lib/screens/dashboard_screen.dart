@@ -9,6 +9,7 @@ import 'health_check_screen.dart';
 import 'snapshots_screen.dart';
 import 'pricing_screen.dart';
 import 'profiles_screen.dart';
+import '../services/currency_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -30,15 +31,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadTotals() async {
-    final assets = await _supabase.from('assets').select('amount');
-    final liabilities = await _supabase.from('liabilities').select('amount');
-    final totalAssets = (assets as List).fold(0.0, (sum, a) => sum + (a['amount'] as num));
-    final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
-    setState(() {
-      _totalAssets = totalAssets;
-      _totalLiabilities = totalLiabilities;
-    });
+  final assets = await _supabase.from('assets').select('amount, currency');
+  final liabilities = await _supabase.from('liabilities').select('amount');
+
+  double totalAssets = 0;
+  for (final a in assets) {
+    final amount = (a['amount'] as num).toDouble();
+    final currency = a['currency'] ?? 'INR';
+    totalAssets += await CurrencyService.convertToINR(amount, currency);
   }
+
+  final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
+  setState(() {
+    _totalAssets = totalAssets;
+    _totalLiabilities = totalLiabilities;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
