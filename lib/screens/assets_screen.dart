@@ -55,6 +55,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        withData: true,
       );
 
       if (result == null) return;
