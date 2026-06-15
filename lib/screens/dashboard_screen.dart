@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'assets_screen.dart';
 import 'transactions_screen.dart';
@@ -31,22 +32,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadTotals() async {
-  final assets = await _supabase.from('assets').select('amount, currency');
-  final liabilities = await _supabase.from('liabilities').select('amount');
+    final assets = await _supabase.from('assets').select('amount, currency');
+    final liabilities = await _supabase.from('liabilities').select('amount');
 
-  double totalAssets = 0;
-  for (final a in assets) {
-    final amount = (a['amount'] as num).toDouble();
-    final currency = a['currency'] ?? 'INR';
-    totalAssets += await CurrencyService.convertToINR(amount, currency);
+    double totalAssets = 0;
+    for (final a in assets) {
+      final amount = (a['amount'] as num).toDouble();
+      final currency = a['currency'] ?? 'INR';
+      totalAssets += await CurrencyService.convertToINR(amount, currency);
+    }
+
+    final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
+    setState(() {
+      _totalAssets = totalAssets;
+      _totalLiabilities = totalLiabilities;
+    });
   }
 
-  final totalLiabilities = (liabilities as List).fold(0.0, (sum, l) => sum + (l['amount'] as num));
-  setState(() {
-    _totalAssets = totalAssets;
-    _totalLiabilities = totalLiabilities;
-  });
-}
+  void _showShareDialog() {
+    final link = 'finmap.app/share/${_supabase.auth.currentUser!.id.substring(0, 8)}';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share Dashboard'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.share, size: 48, color: Colors.green),
+            const SizedBox(height: 16),
+            const Text('Share your financial dashboard with your CA or family member.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(link,
+                  style: const TextStyle(fontFamily: 'monospace', color: Colors.blue)),
+            ),
+            const SizedBox(height: 8),
+            const Text('View-only access • Expires in 7 days',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ElevatedButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: link));
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Link copied to clipboard! ✅')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Copy Link', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +147,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('Finmap'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _showShareDialog,
+            tooltip: 'Share Dashboard',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),

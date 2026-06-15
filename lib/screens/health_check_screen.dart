@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HealthCheckScreen extends StatefulWidget {
   const HealthCheckScreen({super.key});
@@ -12,6 +13,8 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
   final _supabase = Supabase.instance.client;
   double _monthlyExpenses = 0;
   double _monthlyIncome = 0;
+  double _healthCoverage = 0;
+  double _termCoverage = 0;
   bool _isLoading = true;
 
   @override
@@ -27,11 +30,47 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
       if (t['type'] == 'income') income += (t['amount'] as num);
       if (t['type'] == 'expense') expenses += (t['amount'] as num);
     }
+
+    final prefs = await SharedPreferences.getInstance();
+
     setState(() {
       _monthlyIncome = income;
       _monthlyExpenses = expenses;
+      _healthCoverage = prefs.getDouble('healthCoverage') ?? 0;
+      _termCoverage = prefs.getDouble('termCoverage') ?? 0;
       _isLoading = false;
     });
+  }
+
+  Future<void> _editCoverage(String key, double current, String title) async {
+    final controller = TextEditingController(text: current == 0 ? '' : current.toStringAsFixed(0));
+    final result = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Current Coverage (₹)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, double.tryParse(controller.text) ?? 0),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(key, result);
+      setState(() {
+        if (key == 'healthCoverage') _healthCoverage = result;
+        if (key == 'termCoverage') _termCoverage = result;
+      });
+    }
   }
 
   @override
@@ -39,8 +78,14 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
     final emergencyFundNeeded = _monthlyExpenses * 6;
     final emergencyFundProgress = emergencyFundNeeded > 0 ? (_monthlyIncome / emergencyFundNeeded).clamp(0.0, 1.0) : 0.0;
     final savingsRate = _monthlyIncome > 0 ? ((_monthlyIncome - _monthlyExpenses) / _monthlyIncome * 100) : 0.0;
-    final termInsuranceNeeded = _monthlyIncome * 12 * 10;
-    final healthInsuranceOk = _monthlyIncome > 0;
+
+    const healthNeeded = 500000.0;
+    final healthProgress = (_healthCoverage / healthNeeded).clamp(0.0, 1.0);
+    final healthOk = _healthCoverage >= healthNeeded;
+
+    final termNeeded = _monthlyIncome * 12 * 10;
+    final termProgress = termNeeded > 0 ? (_termCoverage / termNeeded).clamp(0.0, 1.0) : 0.0;
+    final termOk = termNeeded > 0 && _termCoverage >= termNeeded;
 
     return Scaffold(
       appBar: AppBar(
@@ -70,19 +115,29 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
                 _healthCard(
                   icon: Icons.health_and_safety,
                   title: 'Health Insurance',
-                  subtitle: 'Recommended: ₹5L minimum coverage',
-                  progress: healthInsuranceOk ? 0.7 : 0.0,
-                  tip: 'Ensure you have at least ₹5L health insurance for your family',
-                  isOk: healthInsuranceOk,
+                  subtitle: _healthCoverage > 0
+                      ? 'You have ₹${_healthCoverage.toStringAsFixed(0)} • Recommended ₹${healthNeeded.toStringAsFixed(0)}'
+                      : 'Recommended: ₹${healthNeeded.toStringAsFixed(0)} minimum coverage',
+                  progress: healthProgress,
+                  tip: healthOk
+                      ? 'Health insurance coverage is sufficient ✅'
+                      : 'You need ₹${(healthNeeded - _healthCoverage).toStringAsFixed(0)} more in health insurance',
+                  isOk: healthOk,
+                  onEdit: () => _editCoverage('healthCoverage', _healthCoverage, 'My Health Insurance Coverage'),
                 ),
                 const SizedBox(height: 12),
                 _healthCard(
                   icon: Icons.shield,
                   title: 'Term Insurance',
-                  subtitle: 'Recommended: ₹${termInsuranceNeeded.toStringAsFixed(0)} (10x annual income)',
-                  progress: termInsuranceNeeded > 0 ? 0.5 : 0.0,
-                  tip: 'Get term insurance worth 10x your annual income',
-                  isOk: false,
+                  subtitle: _termCoverage > 0
+                      ? 'You have ₹${_termCoverage.toStringAsFixed(0)} • Recommended ₹${termNeeded.toStringAsFixed(0)}'
+                      : 'Recommended: ₹${termNeeded.toStringAsFixed(0)} (10x annual income)',
+                  progress: termProgress,
+                  tip: termOk
+                      ? 'Term insurance coverage is sufficient ✅'
+                      : 'You need ₹${(termNeeded - _termCoverage).toStringAsFixed(0)} more in term insurance',
+                  isOk: termOk,
+                  onEdit: () => _editCoverage('termCoverage', _termCoverage, 'My Term Insurance Coverage'),
                 ),
                 const SizedBox(height: 12),
                 _healthCard(
@@ -107,6 +162,7 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
     required double progress,
     required String tip,
     required bool isOk,
+    VoidCallback? onEdit,
   }) {
     return Card(
       child: Padding(
@@ -122,6 +178,12 @@ class _HealthCheckScreenState extends State<HealthCheckScreen> {
                   child: Text(title,
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
+                if (onEdit != null)
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 18, color: Colors.grey),
+                    onPressed: onEdit,
+                    tooltip: 'Update my coverage',
+                  ),
                 Icon(isOk ? Icons.check_circle : Icons.warning,
                     color: isOk ? Colors.green : Colors.orange),
               ],
