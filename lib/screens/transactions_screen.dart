@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -102,6 +103,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         .where((t) => t['type'] == 'expense')
         .fold(0.0, (sum, t) => sum + (t['amount'] as num));
     final savings = income - expenses;
+    final savingsRate = income > 0 ? (savings / income * 100) : 0.0;
+
+    final maxY = [income, expenses, 100.0].reduce((a, b) => a > b ? a : b) * 1.2;
 
     return Scaffold(
       appBar: AppBar(
@@ -114,12 +118,56 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.grey.shade100,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Column(
               children: [
-                _statCard('Income', '₹${income.toStringAsFixed(0)}', Colors.green),
-                _statCard('Expenses', '₹${expenses.toStringAsFixed(0)}', Colors.red),
-                _statCard('Savings', '₹${savings.toStringAsFixed(0)}', Colors.blue),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statCard('Income', '₹${income.toStringAsFixed(0)}', Colors.green),
+                    _statCard('Expenses', '₹${expenses.toStringAsFixed(0)}', Colors.red),
+                    _statCard('Savings', '₹${savings.toStringAsFixed(0)} (${savingsRate.toStringAsFixed(0)}%)', Colors.blue),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 180,
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: maxY,
+                      barGroups: [
+                        BarChartGroupData(x: 0, barRods: [
+                          BarChartRodData(toY: income, color: Colors.green, width: 50, borderRadius: BorderRadius.circular(4)),
+                        ]),
+                        BarChartGroupData(x: 1, barRods: [
+                          BarChartRodData(toY: expenses, color: Colors.red, width: 50, borderRadius: BorderRadius.circular(4)),
+                        ]),
+                      ],
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              switch (value.toInt()) {
+                                case 0:
+                                  return const Padding(padding: EdgeInsets.only(top: 4), child: Text('Income', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)));
+                                case 1:
+                                  return const Padding(padding: EdgeInsets.only(top: 4), child: Text('Expenses', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)));
+                                default:
+                                  return const Text('');
+                              }
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      gridData: const FlGridData(show: true, drawVerticalLine: false),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -195,7 +243,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     return Column(
       children: [
         Text(label, style: TextStyle(color: color, fontSize: 12)),
-        Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
       ],
     );
   }
