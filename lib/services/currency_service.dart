@@ -44,4 +44,21 @@ class CurrencyService {
     final rate = rates[fromCurrency] ?? 1.0;
     return amount / rate;
   }
+  static Future<double> convertFromINR(double amountInINR, String toCurrency) async {
+    if (toCurrency == 'INR') return amountInINR;
+    final rates = await getRates();
+    final rate = rates[toCurrency] ?? 1.0;
+    return amountInINR * rate;
+  }
+
+  static String symbolFor(String currency) {
+    switch (currency) {
+      case 'USD': return '\$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      case 'AED': return 'AED ';
+      case 'SGD': return 'S\$';
+      default: return '₹';
+    }
+  }
 }

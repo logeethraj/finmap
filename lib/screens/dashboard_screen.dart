@@ -11,6 +11,7 @@ import 'snapshots_screen.dart';
 import 'pricing_screen.dart';
 import 'profiles_screen.dart';
 import '../services/currency_service.dart';
+import '../main.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -140,84 +141,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _homeTab() {
     final user = _supabase.auth.currentUser;
-    final netWorth = _totalAssets - _totalLiabilities;
+    final netWorthINR = _totalAssets - _totalLiabilities;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finmap'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _showShareDialog,
-            tooltip: 'Share Dashboard',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Welcome, ${user?.email ?? 'User'}!',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple.shade200),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.workspace_premium, color: Colors.purple, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text('🎉 14-day Pro trial active! Enjoy all features free.',
-                        style: TextStyle(color: Colors.purple, fontSize: 13)),
+    return ValueListenableBuilder<String>(
+      valueListenable: currencyNotifier,
+      builder: (context, currency, _) {
+        return FutureBuilder<List<double>>(
+          future: Future.wait([
+            CurrencyService.convertFromINR(_totalAssets, currency),
+            CurrencyService.convertFromINR(_totalLiabilities, currency),
+            CurrencyService.convertFromINR(netWorthINR, currency),
+          ]),
+          builder: (context, snapshot) {
+            final totalAssets = snapshot.data?[0] ?? _totalAssets;
+            final totalLiabilities = snapshot.data?[1] ?? _totalLiabilities;
+            final netWorth = snapshot.data?[2] ?? netWorthINR;
+            final symbol = CurrencyService.symbolFor(currency);
+
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Finmap'),
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.share),
+                    onPressed: _showShareDialog,
+                    tooltip: 'Share Dashboard',
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: netWorth >= 0 ? Colors.green : Colors.red,
-                borderRadius: BorderRadius.circular(16),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Welcome, ${user?.email ?? 'User'}!',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.purple.shade200),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.workspace_premium, color: Colors.purple, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text('🎉 14-day Pro trial active! Enjoy all features free.',
+                                style: TextStyle(color: Colors.purple, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: netWorth >= 0 ? Colors.green : Colors.red,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text('Net Worth',
+                              style: TextStyle(color: Colors.white70, fontSize: 16)),
+                          const SizedBox(height: 8),
+                          Text('$symbol${netWorth.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold)),
+                          Text(currency,
+                              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _summaryCard('Total Assets',
+                                '$symbol${totalAssets.toStringAsFixed(0)}', Colors.blue)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _summaryCard('Total Liabilities',
+                                '$symbol${totalLiabilities.toStringAsFixed(0)}', Colors.red)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                children: [
-                  const Text('Net Worth',
-                      style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text('₹${netWorth.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                    child: _summaryCard('Total Assets',
-                        '₹${_totalAssets.toStringAsFixed(0)}', Colors.blue)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _summaryCard('Total Liabilities',
-                        '₹${_totalLiabilities.toStringAsFixed(0)}', Colors.red)),
-              ],
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 

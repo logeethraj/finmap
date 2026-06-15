@@ -5,6 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+final currencyNotifier = ValueNotifier<String>('INR');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('darkMode') ?? false;
   themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+  currencyNotifier.value = prefs.getString('currency') ?? 'INR';
 
   runApp(const MyApp());
 }

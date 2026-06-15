@@ -37,6 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveCurrency(String currency) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currency', currency);
+    currencyNotifier.value = currency;
     setState(() => _selectedCurrency = currency);
   }
 
