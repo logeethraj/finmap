@@ -94,6 +94,35 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
+  List<Map<String, dynamic>> _getMonthlyData() {
+    final now = DateTime.now();
+    final months = <Map<String, dynamic>>[];
+    for (int i = 5; i >= 0; i--) {
+      final monthDate = DateTime(now.year, now.month - i, 1);
+      final monthKey = '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}';
+      double income = 0, expense = 0;
+      for (final t in _transactions) {
+        final dateStr = t['date'].toString();
+        if (dateStr.startsWith(monthKey)) {
+          final amount = (t['amount'] as num).toDouble();
+          if (t['type'] == 'income') income += amount;
+          if (t['type'] == 'expense') expense += amount;
+        }
+      }
+      months.add({
+        'label': _monthName(monthDate.month),
+        'income': income,
+        'expense': expense,
+      });
+    }
+    return months;
+  }
+
+  String _monthName(int month) {
+    const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return names[month];
+  }
+
   @override
   Widget build(BuildContext context) {
     final income = _transactions
@@ -105,7 +134,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final savings = income - expenses;
     final savingsRate = income > 0 ? (savings / income * 100) : 0.0;
 
-    final maxY = [income, expenses, 100.0].reduce((a, b) => a > b ? a : b) * 1.2;
+    final monthlyData = _getMonthlyData();
+    final maxY = monthlyData
+        .expand((m) => [m['income'] as double, m['expense'] as double])
+        .fold(100.0, (a, b) => a > b ? a : b) * 1.2;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,34 +160,50 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     _statCard('Savings', '₹${savings.toStringAsFixed(0)} (${savingsRate.toStringAsFixed(0)}%)', Colors.blue),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _LegendDot(color: Colors.green, label: 'Income'),
+                    SizedBox(width: 16),
+                    _LegendDot(color: Colors.red, label: 'Expenses'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Last 6 Months', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                const SizedBox(height: 8),
                 SizedBox(
                   height: 180,
                   child: BarChart(
                     BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
                       maxY: maxY,
-                      barGroups: [
-                        BarChartGroupData(x: 0, barRods: [
-                          BarChartRodData(toY: income, color: Colors.green, width: 50, borderRadius: BorderRadius.circular(4)),
-                        ]),
-                        BarChartGroupData(x: 1, barRods: [
-                          BarChartRodData(toY: expenses, color: Colors.red, width: 50, borderRadius: BorderRadius.circular(4)),
-                        ]),
-                      ],
+                      groupsSpace: 12,
+                      barGroups: monthlyData.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final data = entry.value;
+                        return BarChartGroupData(
+                          x: index,
+                          barRods: [
+                            BarChartRodData(
+                                toY: data['income'], color: Colors.green, width: 12, borderRadius: BorderRadius.circular(2)),
+                            BarChartRodData(
+                                toY: data['expense'], color: Colors.red, width: 12, borderRadius: BorderRadius.circular(2)),
+                          ],
+                        );
+                      }).toList(),
                       titlesData: FlTitlesData(
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
-                              switch (value.toInt()) {
-                                case 0:
-                                  return const Padding(padding: EdgeInsets.only(top: 4), child: Text('Income', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)));
-                                case 1:
-                                  return const Padding(padding: EdgeInsets.only(top: 4), child: Text('Expenses', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)));
-                                default:
-                                  return const Text('');
+                              final index = value.toInt();
+                              if (index >= 0 && index < monthlyData.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(monthlyData[index]['label'], style: const TextStyle(fontSize: 11)),
+                                );
                               }
+                              return const Text('');
                             },
                           ),
                         ),
@@ -244,6 +292,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       children: [
         Text(label, style: TextStyle(color: color, fontSize: 12)),
         Text(value, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
